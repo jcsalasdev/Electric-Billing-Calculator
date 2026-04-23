@@ -100,9 +100,9 @@ function calculate() {
     if (usage < 0) usage = 0;
 
     // ⚡ CORRECT FORMULA
-    const electricityCost = usage * (serviceFee + rate);
+    const electricityCost = usage * rate;
     const totalServiceFee = serviceFee * usage
-    const total = electricityCost;
+    const total = electricityCost + totalServiceFee;
 
     output += `
       <div class="card result-card p-3 mb-2 shadow-sm">
