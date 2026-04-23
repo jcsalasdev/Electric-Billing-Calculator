@@ -2,49 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Electric Billing</title>
+  <title>Electric Billing System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
-    body {
-      background: #f5f7fa;
-    }
-    .card {
-      border-radius: 12px;
-    }
-    .result-card {
-      background: #ffffff;
-      border-left: 5px solid #0d6efd;
-    }
+    body { background: #f5f7fa; }
+    .card { border-radius: 12px; }
+    .result-card { border-left: 5px solid #198754; }
   </style>
 </head>
 <body>
 
 <div class="container py-4">
 
-  <h3 class="mb-3 text-center">⚡ Electric Billing Calculator</h3>
+  <h3 class="text-center mb-3">⚡ Apartment Electric Billing</h3>
 
-  <!-- Settings -->
+  <!-- SETTINGS -->
   <div class="card p-3 mb-3 shadow-sm">
     <h5>Billing Settings</h5>
 
-    <div class="row">
+    <div class="row g-2">
       <div class="col-6">
         <label class="form-label">Rate per kWh</label>
-        <input type="number" id="rate" class="form-control" value="12">
+        <input type="number" id="rate" class="form-control" value="15.6">
       </div>
 
       <div class="col-6">
-        <label class="form-label">Service Fee</label>
-        <input type="number" id="serviceFee" class="form-control" value="0">
+        <label class="form-label">Service Fee (Fixed)</label>
+        <input type="number" id="serviceFee" class="form-control" value="2">
       </div>
     </div>
   </div>
 
-  <!-- Tenant List -->
+  <!-- TENANTS -->
   <div id="tenants"></div>
 
   <div class="d-grid gap-2 mb-3">
@@ -52,11 +44,11 @@
     <button class="btn btn-primary" onclick="calculate()">Calculate Bills</button>
   </div>
 
-  <!-- Results -->
+  <!-- RESULTS -->
   <div id="results"></div>
 
   <div class="d-grid mt-3">
-    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Bills</button>
   </div>
 
 </div>
@@ -70,18 +62,15 @@ function addTenant() {
     <div class="row g-2">
 
       <div class="col-12">
-        <input class="form-control" 
-          placeholder="e.g. Unit 3B - Juan Dela Cruz">
+        <input class="form-control" placeholder="e.g. Unit 3B - Juan Dela Cruz">
       </div>
 
       <div class="col-6">
-        <input type="number" class="form-control" 
-          placeholder="Prev: 12450 kWh">
+        <input type="number" class="form-control" placeholder="Previous Reading (e.g. 12450)">
       </div>
 
       <div class="col-6">
-        <input type="number" class="form-control" 
-          placeholder="Current: 12680 kWh">
+        <input type="number" class="form-control" placeholder="Current Reading (e.g. 12680)">
       </div>
 
     </div>
@@ -104,27 +93,35 @@ function calculate() {
     const prev = parseFloat(inputs[1].value) || 0;
     const curr = parseFloat(inputs[2].value) || 0;
 
-    const kwh = Math.max(curr - prev, 0);
-    const subtotal = kwh * rate;
-    const total = subtotal + serviceFee;
+    // ⚡ CORRECT USAGE CALCULATION
+    let usage = curr - prev;
+
+    // safety check
+    if (usage < 0) usage = 0;
+
+    // ⚡ CORRECT FORMULA
+    const electricityCost = usage * (serviceFee + rate);
+    const totalServiceFee = serviceFee * usage
+    const total = electricityCost;
 
     output += `
       <div class="card result-card p-3 mb-2 shadow-sm">
         <h6 class="mb-2">${name}</h6>
+
         <div class="row">
-          <div class="col-6">Usage:</div>
-          <div class="col-6 text-end">${kwh} kWh</div>
+          <div class="col-6">Usage</div>
+          <div class="col-6 text-end">${usage} kWh</div>
 
-          <div class="col-6">Rate:</div>
-          <div class="col-6 text-end">₱${rate}</div>
+          <div class="col-6">Rate</div>
+          <div class="col-6 text-end text-decoration-underline">₱${rate}</div>
 
-          <div class="col-6">Subtotal:</div>
-          <div class="col-6 text-end">₱${subtotal.toFixed(2)}</div>
+          <div class="col-6">Electricity Cost</div>
+          <div class="col-6 text-end">₱${electricityCost.toFixed(2)}</div>
 
-          <div class="col-6">Service Fee:</div>
-          <div class="col-6 text-end">₱${serviceFee.toFixed(2)}</div>
+          <div class="col-6">Total Service Fee</div>
+          <div class="col-6 text-end">₱${totalServiceFee.toFixed(2)}</div>
 
-          <div class="col-6 fw-bold">Total:</div>
+          <div class="col-6 fw-bold">Total</div>
           <div class="col-6 text-end fw-bold">₱${total.toFixed(2)}</div>
         </div>
       </div>
