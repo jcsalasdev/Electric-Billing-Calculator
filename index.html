@@ -9,10 +9,57 @@
 
   <style>
     body { background: #f5f7fa; }
+
     .card { border-radius: 12px; }
     .result-card { border-left: 5px solid #198754; }
+
+    .rate-value::after {
+      content: "";
+      display: block;
+      width: 70px;
+      height: 2px;
+      background: #000;
+      margin-left: auto;
+      margin-top: 4px;
+    }
+
+    /* PRINT ONLY RESULTS */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+
+      #results, #results * {
+        visibility: visible;
+      }
+
+      #results {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+
+      .result-card {
+        page-break-after: always;
+        break-after: page;
+      }
+      
+      .rate-value::after {
+        content: "";
+        display: block;
+        width: 70px;
+        height: 2px;
+        background: #000;
+        margin-left: auto;
+        margin-top: 4px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
   </style>
 </head>
+
 <body>
 
 <div class="container py-4">
@@ -20,43 +67,45 @@
   <h3 class="text-center mb-3">⚡ Apartment Electric Billing</h3>
 
   <!-- SETTINGS -->
-  <div class="card p-3 mb-3 shadow-sm">
+  <div class="card p-3 mb-3 shadow-sm no-print">
     <h5>Billing Settings</h5>
 
     <div class="row g-2">
       <div class="col-6">
+        <label class="form-label">Billing Month</label>
+        <input type="month" id="billingMonth" class="form-control">
+      </div>
+
+      <div class="col-3">
         <label class="form-label">Rate per kWh</label>
         <input type="number" id="rate" class="form-control" value="15.6">
       </div>
 
-      <div class="col-6">
-        <label class="form-label">Service Fee (Fixed)</label>
+      <div class="col-3">
+        <label class="form-label">Service Fee</label>
         <input type="number" id="serviceFee" class="form-control" value="2">
       </div>
     </div>
   </div>
 
   <!-- TENANTS -->
-  <div id="tenants"></div>
+  <div id="tenants" class="no-print"></div>
 
-  <div class="d-grid gap-2 mb-3">
+  <div class="d-grid gap-2 mb-3 no-print">
     <button class="btn btn-outline-primary" onclick="addTenant()">+ Add Tenant</button>
     <button class="btn btn-primary" onclick="calculate()">Calculate Bills</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Bills</button>
   </div>
 
   <!-- RESULTS -->
   <div id="results"></div>
-
-  <div class="d-grid mt-3">
-    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Bills</button>
-  </div>
 
 </div>
 
 <script>
 function addTenant() {
   const div = document.createElement("div");
-  div.className = "card p-3 mb-3 shadow-sm";
+  div.className = "card p-3 mb-3 shadow-sm no-print";
 
   div.innerHTML = `
     <div class="row g-2">
@@ -66,11 +115,11 @@ function addTenant() {
       </div>
 
       <div class="col-6">
-        <input type="number" class="form-control" placeholder="Previous Reading (e.g. 12450)">
+        <input type="number" class="form-control" placeholder="Previous Reading">
       </div>
 
       <div class="col-6">
-        <input type="number" class="form-control" placeholder="Current Reading (e.g. 12680)">
+        <input type="number" class="form-control" placeholder="Current Reading">
       </div>
 
     </div>
@@ -82,6 +131,7 @@ function addTenant() {
 function calculate() {
   const rate = parseFloat(document.getElementById("rate").value) || 0;
   const serviceFee = parseFloat(document.getElementById("serviceFee").value) || 0;
+  const billingMonth = document.getElementById("billingMonth").value || "N/A";
 
   const tenants = document.querySelectorAll("#tenants .card");
   let output = "";
@@ -93,33 +143,33 @@ function calculate() {
     const prev = parseFloat(inputs[1].value) || 0;
     const curr = parseFloat(inputs[2].value) || 0;
 
-    // ⚡ CORRECT USAGE CALCULATION
     let usage = curr - prev;
-
-    // safety check
     if (usage < 0) usage = 0;
 
-    // ⚡ CORRECT FORMULA
     const electricityCost = usage * rate;
-    const totalServiceFee = serviceFee * usage
+    const totalServiceFee = usage * serviceFee;
     const total = electricityCost + totalServiceFee;
 
     output += `
-      <div class="card result-card p-3 mb-2 shadow-sm">
-        <h6 class="mb-2">${name}</h6>
+      <div class="card result-card p-3 mb-3">
+        <div class="text-center mb-2 fw-bold">
+          Billing Month: ${billingMonth}
+        </div>
+
+        <h6 class="mb-2 text-uppercase">${name}</h6>
 
         <div class="row">
           <div class="col-6">Usage</div>
-          <div class="col-6 text-end">${usage} kWh</div>
+          <div class="col-6 text-end text-uppercase">${usage} kWh</div>
 
           <div class="col-6">Rate</div>
-          <div class="col-6 text-end text-decoration-underline">₱${rate}</div>
+          <div class="col-6 text-end rate-value">₱${rate}</div>
 
           <div class="col-6">Electricity Cost</div>
           <div class="col-6 text-end">₱${electricityCost.toFixed(2)}</div>
 
-          <div class="col-6">Total Service Fee</div>
-          <div class="col-6 text-end">₱${totalServiceFee.toFixed(2)}</div>
+          <div class="col-6">Service Fee</div>
+          <div class="col-6 text-end rate-value">₱${totalServiceFee.toFixed(2)}</div>
 
           <div class="col-6 fw-bold">Total</div>
           <div class="col-6 text-end fw-bold">₱${total.toFixed(2)}</div>
