@@ -11,7 +11,10 @@
     body { background: #f5f7fa; }
 
     .card { border-radius: 12px; }
-    .result-card { border-left: 5px solid #198754; }
+
+    .result-card {
+      border-left: 5px solid #198754;
+    }
 
     .rate-value::after {
       content: "";
@@ -23,11 +26,16 @@
       margin-top: 4px;
     }
 
-    /* PRINT ONLY RESULTS */
+    .is-invalid {
+      border: 2px solid #dc3545 !important;
+    }
+
+    .is-valid {
+      border: 2px solid #198754 !important;
+    }
+
     @media print {
-      body * {
-        visibility: hidden;
-      }
+      body * { visibility: hidden; }
 
       #results, #results * {
         visibility: visible;
@@ -42,19 +50,6 @@
 
       .result-card {
         page-break-after: always;
-        break-after: page;
-      }
-      
-      .rate-value::after {
-        content: "";
-        display: block;
-        width: 70px;
-        height: 2px;
-        background: #000;
-        margin-left: auto;
-        margin-top: 4px;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
     }
   </style>
@@ -67,7 +62,7 @@
   <h3 class="text-center mb-3">⚡ Apartment Electric Billing</h3>
 
   <!-- SETTINGS -->
-  <div class="card p-3 mb-3 shadow-sm no-print">
+  <div class="card p-3 mb-3 shadow-sm">
     <h5>Billing Settings</h5>
 
     <div class="row g-2">
@@ -89,28 +84,28 @@
   </div>
 
   <!-- TENANTS -->
-  <div id="tenants" class="no-print"></div>
+  <div id="tenants"></div>
 
-  <div class="row g-2 mb-3 no-print">
-  
+  <div class="row g-2 mb-3">
+
     <div class="col-12 col-md-4">
       <button class="btn btn-outline-primary w-100" onclick="addTenant()">
         + Add Tenant
       </button>
     </div>
-  
+
     <div class="col-12 col-md-4">
       <button class="btn btn-primary w-100" onclick="calculate()">
         Calculate Bills
       </button>
     </div>
-  
+
     <div class="col-12 col-md-4">
-      <button class="btn btn-secondary w-100" onclick="window.print()">
+      <button id="printBtn" class="btn btn-secondary w-100" onclick="tryPrint()" disabled>
         🖨️ Print Bills
       </button>
     </div>
-  
+
   </div>
 
   <!-- RESULTS -->
@@ -118,10 +113,25 @@
 
 </div>
 
+<!-- TOAST -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="errorToast" class="toast text-bg-danger" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        Cannot print due to errors. Please fix invalid inputs first.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
+
 function addTenant() {
   const div = document.createElement("div");
-  div.className = "card p-3 mb-3 shadow-sm no-print";
+  div.className = "card p-3 mb-3 shadow-sm";
 
   div.innerHTML = `
     <div class="row g-2">
@@ -144,24 +154,151 @@ function addTenant() {
   document.getElementById("tenants").appendChild(div);
 }
 
+/* ✅ SET CURRENT MONTH DEFAULT */
+document.addEventListener("DOMContentLoaded", function () {
+  const monthInput = document.getElementById("billingMonth");
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  monthInput.value = `${year}-${month}`;
+});
+
+/* REAL-TIME VALIDATION */
+document.addEventListener("input", function (e) {
+  if (e.target.tagName !== "INPUT") return;
+
+  /* SERVICE FEE VALIDATION ONLY */
+  if (e.target.id === "serviceFee") {
+    const val = parseFloat(e.target.value);
+
+    e.target.classList.remove("is-invalid", "is-valid");
+
+    if (e.target.value === "" || isNaN(val) || val < 0) {
+      e.target.classList.add("is-invalid");
+    } else {
+      e.target.classList.add("is-valid");
+    }
+    return;
+  }
+
+  /* IGNORE SETTINGS */
+  if (e.target.id === "rate" || e.target.id === "billingMonth") {
+    e.target.classList.remove("is-invalid", "is-valid");
+    return;
+  }
+
+  /* TENANT VALIDATION */
+  const card = e.target.closest("#tenants .card");
+  if (!card) return;
+
+  const inputs = card.querySelectorAll("input");
+
+  const name = inputs[0];
+  const prev = inputs[1];
+  const curr = inputs[2];
+
+  [name, prev, curr].forEach(i => i.classList.remove("is-invalid", "is-valid"));
+
+  const prevVal = parseFloat(prev.value);
+  const currVal = parseFloat(curr.value);
+
+  if (!name.value.trim()) {
+    name.classList.add("is-invalid");
+  } else {
+    name.classList.add("is-valid");
+  }
+
+  if (
+    prev.value === "" ||
+    curr.value === "" ||
+    isNaN(prevVal) ||
+    isNaN(currVal)
+  ) {
+    prev.classList.add("is-invalid");
+    curr.classList.add("is-invalid");
+  } else {
+    prev.classList.add("is-valid");
+    curr.classList.add("is-valid");
+
+    if (currVal < prevVal) {
+      curr.classList.add("is-invalid");
+    }
+  }
+});
+
+/* CALCULATE */
 function calculate() {
-  const rate = parseFloat(document.getElementById("rate").value) || 0;
-  const serviceFee = parseFloat(document.getElementById("serviceFee").value) || 0;
-  const billingMonth = document.getElementById("billingMonth").value || "N/A";
+  const rate = parseFloat(document.getElementById("rate").value);
+  const serviceFee = parseFloat(document.getElementById("serviceFee").value);
+  const billingMonth = document.getElementById("billingMonth").value;
 
   const tenants = document.querySelectorAll("#tenants .card");
   let output = "";
+  let hasError = false;
 
-  tenants.forEach(card => {
+  const printBtn = document.getElementById("printBtn");
+  const resultDiv = document.getElementById("results");
+
+  resultDiv.innerHTML = "";
+
+  /* BILLING MONTH REQUIRED */
+  if (!billingMonth) {
+    resultDiv.innerHTML = `<div class="alert alert-danger">Billing month is required.</div>`;
+    printBtn.disabled = true;
+    return;
+  }
+
+  /* RATE MUST BE > 0 */
+  if (isNaN(rate) || rate <= 0) {
+    resultDiv.innerHTML = `<div class="alert alert-danger">Rate must be greater than 0.</div>`;
+    printBtn.disabled = true;
+    return;
+  }
+
+  /* SERVICE FEE ≥ 0 */
+  if (isNaN(serviceFee) || serviceFee < 0) {
+    resultDiv.innerHTML = `<div class="alert alert-danger">Service fee must be 0 or higher.</div>`;
+    printBtn.disabled = true;
+    return;
+  }
+
+  if (tenants.length === 0) {
+    resultDiv.innerHTML = `<div class="alert alert-warning">No tenants added.</div>`;
+    printBtn.disabled = true;
+    return;
+  }
+
+  tenants.forEach((card, index) => {
     const inputs = card.querySelectorAll("input");
 
-    const name = inputs[0].value || "Unnamed Unit";
-    const prev = parseFloat(inputs[1].value) || 0;
-    const curr = parseFloat(inputs[2].value) || 0;
+    const name = inputs[0].value.trim();
+    const prev = parseFloat(inputs[1].value);
+    const curr = parseFloat(inputs[2].value);
+
+    let errors = [];
+
+    if (!name) errors.push("Tenant name is required.");
+    if (isNaN(prev) || isNaN(curr)) errors.push("Readings must be valid numbers.");
+    if (!isNaN(prev) && !isNaN(curr) && curr < prev)
+      errors.push("Current reading cannot be lower than previous reading.");
+
+    if (errors.length > 0) {
+      hasError = true;
+
+      output += `
+        <div class="alert alert-danger">
+          <strong>Tenant #${index + 1} Error</strong>
+          <ul class="mb-0">
+            ${errors.map(e => `<li>${e}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+      return;
+    }
 
     let usage = curr - prev;
-    if (usage < 0) usage = 0;
-
     const electricityCost = usage * rate;
     const totalServiceFee = usage * serviceFee;
     const total = electricityCost + totalServiceFee;
@@ -176,7 +313,7 @@ function calculate() {
 
         <div class="row">
           <div class="col-6">Usage</div>
-          <div class="col-6 text-end text-uppercase">${usage} kWh</div>
+          <div class="col-6 text-end">${usage} kWh</div>
 
           <div class="col-6">Rate</div>
           <div class="col-6 text-end rate-value">₱${rate}</div>
@@ -194,8 +331,24 @@ function calculate() {
     `;
   });
 
-  document.getElementById("results").innerHTML = output;
+  resultDiv.innerHTML = output;
+
+  printBtn.disabled = hasError;
 }
+
+/* PRINT */
+function tryPrint() {
+  const invalid = document.querySelectorAll(".is-invalid").length > 0;
+
+  if (invalid) {
+    const toast = new bootstrap.Toast(document.getElementById("errorToast"));
+    toast.show();
+    return;
+  }
+
+  window.print();
+}
+
 </script>
 
 </body>
