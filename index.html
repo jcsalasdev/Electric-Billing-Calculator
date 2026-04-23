@@ -91,10 +91,26 @@
   <!-- TENANTS -->
   <div id="tenants" class="no-print"></div>
 
-  <div class="d-grid gap-2 mb-3 no-print">
-    <button class="btn btn-outline-primary" onclick="addTenant()">+ Add Tenant</button>
-    <button class="btn btn-primary" onclick="calculate()">Calculate Bills</button>
-    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Bills</button>
+  <div class="row g-2 mb-3 no-print">
+  
+    <div class="col-12 col-md-4">
+      <button class="btn btn-outline-primary w-100" onclick="addTenant()">
+        + Add Tenant
+      </button>
+    </div>
+  
+    <div class="col-12 col-md-4">
+      <button class="btn btn-primary w-100" onclick="calculate()">
+        Calculate Bills
+      </button>
+    </div>
+  
+    <div class="col-12 col-md-4">
+      <button class="btn btn-secondary w-100" onclick="window.print()">
+        🖨️ Print Bills
+      </button>
+    </div>
+  
   </div>
 
   <!-- RESULTS -->
